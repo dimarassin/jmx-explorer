@@ -12,7 +12,7 @@ import java.util.UUID;
  *
  * @author Dima Rassin
  */
-abstract class AbstractJmxCommand<T extends JmxCommand> implements JmxCommand<T>, Serializable {
+abstract class AbstractJmxCommand<T extends JmxCommand<?>> implements JmxCommand<T>, Serializable {
 	private String id;
 	private JMException exception;
 

@@ -4,11 +4,11 @@ import com.hazelcast.client.HazelcastClient;
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
-//import com.hazelcast.core.IMap;
 import com.hazelcast.core.Message;
 import com.hazelcast.core.MessageListener;
 import com.freetools.jmx.explorer.entities.JmxCommand;
 import com.freetools.jmx.explorer.entities.JmxNode;
+import com.hazelcast.util.Base64;
 
 import javax.management.MBeanServer;
 import java.io.File;
@@ -23,7 +23,7 @@ import java.util.UUID;
  *
  * @author Dima Rassin
  */
-public class JmxAgent{
+public class ExplorerAgent {
 	private MBeanServer server = ManagementFactory.getPlatformMBeanServer();
 
 	private String id;
@@ -31,31 +31,39 @@ public class JmxAgent{
 	private String host;
 	private String path;
 
-	private HazelcastInstance instance;
+	private HazelcastInstance hc;
 
-	public void register() {
-		if (id == null || id.isEmpty()) id = UUID.randomUUID().toString();
+	public ExplorerAgent register(String address) {
+		if (id == null || id.isEmpty()) id = generateId();
 		if (pid == null || pid.isEmpty()) pid = resolvePid();
 		if (host == null || host.isEmpty()) host = resolveHost();
 		if (path == null || path.isEmpty()) path = resolvePath();
 
 		Set<HazelcastInstance> hcInstances = Hazelcast.getAllHazelcastInstances();
 		if (!hcInstances.isEmpty()){
-			instance = hcInstances.iterator().next();
+			hc = hcInstances.iterator().next();
 		} else {
-			instance = HazelcastClient.newHazelcastClient(new ClientConfig());
+			ClientConfig clientConfig = new ClientConfig()
+					.addAddress(address);
+			hc = HazelcastClient.newHazelcastClient(clientConfig);
 		}
 
-		instance.getMap("topology").put(id, new JmxNode(id, pid, host, path));
+		hc.getMap("topology").put(id, new JmxNode(id, pid, host, path));
 
-		instance.<JmxCommand>getTopic(id).addMessageListener(new MessageListener<JmxCommand>() {
+		hc.<JmxCommand>getTopic(id).addMessageListener(new MessageListener<JmxCommand>() {
 			@Override
 			public void onMessage(Message<JmxCommand> message) {
 				JmxCommand command = message.getMessageObject();
 				command.execute(server);
-				instance.getMap("results").put(command.getId(), command);
+				hc.getMap("results").put(command.getId(), command);
 			}
 		});
+		return this;
+	}
+
+	private String generateId(){
+		UUID id = UUID.randomUUID();
+		return Long.toHexString(id.getMostSignificantBits()) + "-" + Long.toHexString(id.getLeastSignificantBits());
 	}
 
 	private String resolvePid(){
@@ -74,21 +82,21 @@ public class JmxAgent{
 		return new File(".").getAbsolutePath();
 	}
 
-	public JmxAgent setId(String id) {
+	public ExplorerAgent setId(String id) {
 		this.id = id;
 		return this;
 	}
-	public JmxAgent setPid(String pid) {
+	public ExplorerAgent setPid(String pid) {
 		this.pid = pid;
 		return this;
 	}
 
-	public JmxAgent setHost(String host) {
+	public ExplorerAgent setHost(String host) {
 		this.host = host;
 		return this;
 	}
 
-	public JmxAgent setPath(String path) {
+	public ExplorerAgent setPath(String path) {
 		this.path = path;
 		return this;
 	}

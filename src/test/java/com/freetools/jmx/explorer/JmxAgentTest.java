@@ -1,6 +1,5 @@
 package com.freetools.jmx.explorer;
 
-import com.freetools.jmx.explorer.JmxAgent;
 import com.hazelcast.config.Config;
 import com.hazelcast.core.EntryAdapter;
 import com.hazelcast.core.EntryEvent;
@@ -22,13 +21,13 @@ import static org.fest.assertions.Assertions.assertThat;
 
 public class JmxAgentTest {
 	private String id = "myAgent";
-	private JmxAgent agent;
+	private ExplorerAgent agent;
 	private HazelcastInstance hc;
 
 	@Before
 	public void before() throws Exception {
 		hc = Hazelcast.newHazelcastInstance(new Config());
-		agent = new JmxAgent()
+		agent = new ExplorerAgent()
 				.setId(id);
 	}
 
@@ -39,13 +38,13 @@ public class JmxAgentTest {
 	@Test
 	public void testRegister() throws Exception {
 		assertThat(hc.getMap("topology")).isEmpty();
-		agent.setId("id").setPid("pid").setHost("host").setPath("path").register();
+		agent.setId("id").setPid("pid").setHost("host").setPath("path").register("locally");
 		assertThat(hc.getMap("topology")).isNotEmpty().includes(MapAssert.entry("id", new JmxNode("id", "pid", "host", "path")));
 	}
 
 	@Test(timeout = 5000)
 	public void testCommand() throws Exception {
-		agent.register();
+		agent.register("127.0.0.1:5701");
 		hc.<String,TestJmxCommand>getMap("results").addEntryListener(new EntryAdapter<String,TestJmxCommand>(){
 			@Override
 			public void entryAdded(EntryEvent<String,TestJmxCommand> event) {

@@ -7,7 +7,7 @@ import javax.management.MBeanServer;
  *
  * @author Dima Rassin
  */
-public interface JmxCommand<T extends JmxCommand> {
+public interface JmxCommand<T extends JmxCommand<?>> {
 	String getId();
 	T execute(MBeanServer mBeanServer);
 }
